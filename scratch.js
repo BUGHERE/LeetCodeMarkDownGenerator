@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         力扣题目转Markdown
-// @name:en      LeetCode Promlem to Markdown
+// @name         力扣转Markdown
+// @name:en      LeetCode to Markdown
 // @namespace    https://gabrielxd.top/
-// @version      1.2.0
-// @description  转换力扣题目为Markdown格式并复制到剪贴板
+// @version      1.3.0
+// @description  转换力扣为Markdown格式并复制到剪贴板
 // @description:en  Convert the LeetCode problems to markdown and copy it to the clipboard.
-// @author       GabrielxD
+// @author       GabrielxD、 BUGHERE
 // @match        *://leetcode.cn/problems/*
 // @exclude      *://leetcode.cn/problems/*/solutions/*
 // @exclude      *://leetcode.cn/problems/*/discussion/*
@@ -56,52 +56,42 @@ const htmlToMd = htmlStr => {
   console.log('转换开始...');
   return turndownService.turndown(htmlStr.replace(/<p>&nbsp;<\/p>/g, '<br>'));
 }
-const getDescMd = () => htmlToMd(descEle.innerHTML).replaceAll(" ", " ").replaceAll("​", "");
-const getCodeMd = () => '```' + languageEle.innerText.toLowerCase() + '\n' + codeEle.innerText.replaceAll(" ", " ") + '\n```\n';
-const getTitle = () => titleEle.innerText;
 
 // 查询到的节点缓存在变量中
 let titleEle, descEle, codeEle, languageEle;
-// 复制标题
-const copyTitleBtn = document.createElement('button');
-copyTitleBtn.innerText = '复制标题';
-copyTitleBtn.addEventListener('click', copyTitleHandler);
-GM_registerMenuCommand("复制标题", copyTitleHandler);
-// 复制题目
-const copyDescBtn = document.createElement('button');
-copyDescBtn.innerText = '复制题目';
-copyDescBtn.addEventListener('click', copyDescHandler);
-GM_registerMenuCommand("复制题目", copyDescHandler);
+const getTitleMd = () => htmlToMd(titleEle.innerText);
+const getDescMd = () => htmlToMd(descEle.innerHTML).replaceAll(" ", " ").replaceAll("​", "");
+const getCodeMd = () => '```' + languageEle.innerText.toLowerCase() + '\n' + codeEle.innerText.replaceAll(" ", " ") + '\n```\n';
+const getLanguageMd = () => htmlToMd(languageEle.innerText);
+
 // 生成博客并复制
-const copySolnTmplBtn = document.createElement('button');
-copySolnTmplBtn.innerText = '生成博客';
-copySolnTmplBtn.addEventListener('click', copySolnTmplHandler);
+const copyAsBlogBtn = document.createElement('button');
+copyAsBlogBtn.innerText = '生成博客';
+copyAsBlogBtn.addEventListener('click', copySolnTmplHandler);
 GM_registerMenuCommand("生成博客", copySolnTmplHandler);
 // 放入功能按钮
-const copyBtnsEle = document.createElement('div');
-copyBtnsEle.className = 'copy-btns';
-copyBtnsEle.appendChild(copyTitleBtn);
-copyBtnsEle.appendChild(copyDescBtn);
-copyBtnsEle.appendChild(copySolnTmplBtn);
+const copyBtnEle = document.createElement('div');
+copyBtnEle.className = 'copy-btns';
+copyBtnEle.appendChild(copyAsBlogBtn);
 
 // 重试计数器
 let retryCounter = 0;
 
 // 初始化元素
 function initElements(targetEle) {
-  titleEle = targetEle.querySelector('a.text-label-1');
-  descEle = targetEle.querySelector('div[data-track-load=description_content]');
-  codeEle = targetEle.querySelector('div[role=presentation].monaco-mouse-cursor-text');
-  languageEle = targetEle.querySelector('button.flex.cursor-pointer.items-center');
-  titleEle.parentElement.appendChild(copyBtnsEle);
+  titleEle = targetEle.querySelector('div.text-title-large');
+  descEle = targetEle.querySelector('div.elfjS');
+  codeEle = targetEle.querySelector('div.lines-content');  // TODO：只能复制当前视图包含的代码，无法复制所有代码
+  languageEle = targetEle.querySelector('div#editor').querySelector('button.rounded');
+  titleEle.parentElement.appendChild(copyBtnEle);
 }
 
 function firstInit() {
   const targetEle = document.querySelector('div[id=qd-content]');
-  if (targetEle && targetEle.querySelector('a.text-label-1') !== null
-    && targetEle.querySelector('div[data-track-load=description_content]') !== null
-    && targetEle.querySelector('div[role=presentation]') !== null
-    && targetEle.querySelector('button.flex.cursor-pointer.items-center') !== null) {
+  if (targetEle && targetEle.querySelector('div.text-title-large') !== null
+    && targetEle.querySelector('div.elfjS') !== null
+    && targetEle.querySelector('div.lines-content') !== null
+    && targetEle.querySelector('div#editor').querySelector('button.rounded') !== null) {
     initElements(targetEle);
   } else {
     if (retryCounter++ > 10) {
@@ -133,28 +123,10 @@ const init = () => {
   firstInit();
 }
 
-function copyTitleHandler() {
-  const title = getTitle();
-  // 如果标题中有题号, 则舍弃题号取点后的部分作为短标题返回
-  GM_setClipboard(title.includes('.') ? title.substring(title.lastIndexOf('.') + 2) : title);
-  message.success({
-    text: '复制标题成功',
-    duration: 800
-  });
-}
-
-function copyDescHandler() {
-  GM_setClipboard(getDescMd());
-  message.success({
-    text: '复制题目成功',
-    duration: 800
-  });
-}
-
 function copySolnTmplHandler() {
-  let title = getTitle();
+  let title = getTitleMd();
   title = title.includes('.') ? title.substring(title.lastIndexOf('.') + 2) : title
-  GM_setClipboard(`## [${title}](${location.href})\n\n---\n\n${getDescMd()}\n\n\n\n### (解法)\n\n\n\n${getCodeMd()}`);
+  GM_setClipboard(`## [${title}](${location.href})\n---\n${getDescMd()}\n\n### ${getLanguageMd()}\n\n${getCodeMd()}`);
     message.success({
         text: '复制成功',
         duration: 800
@@ -163,6 +135,5 @@ function copySolnTmplHandler() {
 
 (() => {
     'use strict';
-
     window.addEventListener('load', init);
 })();
