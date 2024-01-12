@@ -60,7 +60,7 @@ const htmlToMd = htmlStr => {
 // 查询到的节点缓存在变量中
 let titleEle, descEle, codeEle, languageEle;
 const getTitleMd = () => htmlToMd(titleEle.innerText);
-const getDescMd = () => htmlToMd(descEle.innerHTML).replaceAll(" ", " ").replaceAll("​", "");
+const getDescMd = () => htmlToMd(descEle.innerHTML).replaceAll(" ", " ").replaceAll("​", "").replaceAll("   ", " ").replaceAll("[\\n\\s ​]{3,}", "\n\n");
 const getCodeMd = () => '```' + languageEle.innerText.toLowerCase() + '\n' + codeEle.innerText.replaceAll(" ", " ") + '\n```\n';
 const getLanguageMd = () => htmlToMd(languageEle.innerText);
 
@@ -126,7 +126,7 @@ const init = () => {
 function copySolnTmplHandler() {
   let title = getTitleMd();
   title = title.includes('.') ? title.substring(title.lastIndexOf('.') + 2) : title
-  GM_setClipboard(`## [${title}](${location.href})\n---\n${getDescMd()}\n\n### ${getLanguageMd()}\n\n${getCodeMd()}`);
+  GM_setClipboard(`### [${title}](${location.href})\n\n${getDescMd()}\n\n#### ${getLanguageMd()}\n\n${getCodeMd()}`);
     message.success({
         text: '复制成功',
         duration: 800
